@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 int rew_net_bind_tcp(const char *port);
-
+int rew_net_connect_tcp(const char *rem_addr, const char *port);
 
 
 #endif //REW_NET_UTILS_
