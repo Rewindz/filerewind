@@ -11,6 +11,17 @@
 
 
 
+int send_command(int sock, const char* cmd, const char *error_format)
+{
+  int cmd_len = strlen(cmd + 1);
+  if(write(sock, cmd, cmd_len) < 0){
+    fprintf(stderr, error_format, strerror(errno));
+    return -1;
+  } 
+  return 0;
+}
+
+
 
 
 int main(int argc, char **argv)
@@ -44,13 +55,27 @@ int main(int argc, char **argv)
   if(strcmp(buffer, "OK") == 0){
     printf("Got OK!\n");
   }
-  
 
-  const char *quit_cmd = "QUIT\n\0";
+
+  char *input = calloc(1024, sizeof(char));
+  if(!input){
+    fprintf(stderr, "Out of memory wtf?\n%s\n", strerror(errno));
+    return errno;
+  }
+  while(strcmp("QUIT", input) != 0){
+    scanf("%s", input);
+    if(send_command(server_sock, input, "Failed to send command!\n%s\n") < 0) break;
+  }
+  free(input);
+
+  
+ 
+
+  /*const char *quit_cmd = "QUIT\n\0";
   int quit_cmd_len = strlen(quit_cmd) + 1;
   if(write(server_sock, quit_cmd, quit_cmd_len) != quit_cmd_len){
     fprintf(stderr, "Failed to properly write to server! Wrote %i bytes.\n", quit_cmd_len);
-  }
+    }*/
 
   close(server_sock);
 

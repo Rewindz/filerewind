@@ -1,0 +1,19 @@
+#ifndef SERVER_COMMANDS_H_
+#define SERVER_COMMANDS_H_
+
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <string.h>
+
+
+void process_ls_cmd(int argc, char **argv);
+
+
+
+
+
+#endif //SERVER_COMMANDS_H_

@@ -12,6 +12,7 @@
 #include <pthread.h>
 
 #include "lib/netutils.h"
+#include "lib/svrcmds.h"
 
 
 
@@ -39,8 +40,14 @@ CommandAction parse_client_cmd(const char *cmd)
     if(strcmp("QUIT", token) == 0){
       free(buffer);
       return REW_CMD_QUIT;
-    }else
+    }
+    else if(strcmp("LS", token) == 0){
+      free(buffer);
+      return REW_CMD_LS;
+    }
+    else{
       break;
+    }
 
     
   }while(token);
@@ -77,6 +84,9 @@ void *serve_client(void *client_con_info) //struct ClientConnectionInfo -- must 
       close_req = 1;
       printf("Quit command\n");
       break;
+    case REW_CMD_LS:
+      process_ls_cmd(0, NULL);
+      break;
     default:
       printf("Unknown command!\nCMD: %s\n", cmd_buffer);
       break;
@@ -95,7 +105,7 @@ void spawn_thread(int sockfd, struct sockaddr_in addr_in, in_addr_t addr_in_len)
   ClientConnectionInfo *cci = calloc(1, sizeof(ClientConnectionInfo));
   cci->sock = sockfd;
   cci->addr_in = addr_in;
-  cci->addr_in_len = addr_in_len;
+  cci->addr_in_len = addr_in_len; 
   
   pthread_t thread_id = 0;
   pthread_attr_t thread_attr = {0};
