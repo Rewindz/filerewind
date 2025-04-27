@@ -13,7 +13,8 @@
 
 int send_command(int sock, const char* cmd, const char *error_format)
 {
-  int cmd_len = strlen(cmd + 1);
+  int cmd_len = strlen(cmd) + 1;
+  printf("CMD: %s\tLength: %i\n", cmd, cmd_len);
   if(write(sock, cmd, cmd_len) < 0){
     fprintf(stderr, error_format, strerror(errno));
     return -1;
@@ -60,10 +61,12 @@ int main(int argc, char **argv)
   char *input = calloc(1024, sizeof(char));
   if(!input){
     fprintf(stderr, "Out of memory wtf?\n%s\n", strerror(errno));
+    close(server_sock);
     return errno;
   }
   while(strcmp("QUIT", input) != 0){
     scanf("%s", input);
+    printf("Scan length: %zi\n", strlen(input));
     if(send_command(server_sock, input, "Failed to send command!\n%s\n") < 0) break;
   }
   free(input);

@@ -8,30 +8,36 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
+#include <signal.h>
 #include <pthread.h>
 
 #include "lib/netutils.h"
 #include "lib/svrcmds.h"
 
+volatile sig_atomic_t flag_stop = 0;
+
+void handle_sigint(int sig)
+{
+  (void)sig;
+  flag_stop = 1;
+}
 
 
 CommandAction parse_client_cmd(const char *cmd)
 {
   char *token;
   char *saveptr;
-  char *buffer = malloc(strlen(cmd));
+  char *buffer = calloc(strlen(cmd) + 2, sizeof(char));
   
   if(!buffer){
     fprintf(stderr, "Failed to allocate memory!\n");
     return REW_CMD_ERR;
   }
   
-  memset(buffer, 0, strlen(cmd));
   strcpy(buffer, cmd);
+  printf("CMD: %s\n", cmd);
   do{
-    printf("CMD: %s\n", cmd);
-    token = strtok_r(buffer, "\n", &saveptr);
+    token = strtok_r(buffer, " ", &saveptr);
     //printf("Token: %s\nBuffer: %s\n", token, buffer);
 
     if(token == NULL)
@@ -65,9 +71,13 @@ void *serve_client(void *client_con_info) //struct ClientConnectionInfo -- must 
   //TODO: TIMEOUT
   
   //Server Client Loop
-  char cmd_buffer[512];
+  int cmd_buffer_len = 512;
+  char cmd_buffer[cmd_buffer_len];
+  
   do{
-    ssize_t recieved = recv(cci->sock, cmd_buffer, sizeof(cmd_buffer), 0);
+    memset(cmd_buffer, 0, cmd_buffer_len);
+    ssize_t recieved = recv(cci->sock, cmd_buffer, cmd_buffer_len, 0);
+    printf("Recieved size: %zi\tBuffer: %s\n", recieved, cmd_buffer);
 
     if(recieved == -1){
       fprintf(stderr, "Error recieving message!\n%s\n", strerror(errno));
@@ -100,7 +110,7 @@ void *serve_client(void *client_con_info) //struct ClientConnectionInfo -- must 
 }
 
 
-void spawn_thread(int sockfd, struct sockaddr_in addr_in, in_addr_t addr_in_len)
+pthread_t spawn_thread(int sockfd, struct sockaddr_in addr_in, in_addr_t addr_in_len)
 {
   ClientConnectionInfo *cci = calloc(1, sizeof(ClientConnectionInfo));
   cci->sock = sockfd;
@@ -115,8 +125,9 @@ void spawn_thread(int sockfd, struct sockaddr_in addr_in, in_addr_t addr_in_len)
     fprintf(stderr, "Error creating thread!\n%s\n", strerror(res));
     free(cci);
     close(sockfd);
-    return;
+    return -1;
   }
+  return thread_id;
 }
 
 
@@ -127,6 +138,12 @@ int main(int argc, char **argv)
     fprintf(stderr, "Usage: %s [listen-port]\n", argv[0]);
     return 1;
   }
+
+  struct sigaction sa;
+  sa.sa_handler = handle_sigint;
+  sa.sa_flags = 0;
+  sigemptyset(&sa.sa_mask);
+  sigaction(SIGINT, &sa, NULL);
   
   int socket = rew_net_bind_tcp(argv[1]);
 
@@ -170,8 +187,9 @@ int main(int argc, char **argv)
       spawn_thread(open_sock, connected_client, connected_client_len);
     }
     
-  }while(1);
+  }while(!flag_stop);
 
+  close(open_sock);
   close(socket);
   
   
