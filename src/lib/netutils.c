@@ -88,3 +88,13 @@ int rew_net_connect_tcp(const char *rem_addr, const char *port) // -> sockfd
   return sfd;
 
 }
+
+
+int server_reply(int sockfd, char *reply)
+{
+  
+
+
+
+
+}

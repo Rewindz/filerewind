@@ -8,20 +8,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <dirent.h>
 
 
 typedef struct{
   int sock;
   struct sockaddr_in addr_in;
   in_addr_t addr_in_len;
-  char cwd[1024];
+  DIR *dir;
 }ClientConnectionInfo;
 
 typedef enum{
   REW_CMD_ERR = -1,
   REW_OK = 0,
   REW_CMD_QUIT = 1,
-  REW_CMD_LS = 2
+  REW_CMD_LS = 2,
+  REW_CMD_CD = 3
 }CommandAction;
 
 

@@ -23,11 +23,13 @@ void handle_sigint(int sig)
 }
 
 
-CommandAction parse_client_cmd(const char *cmd)
+CommandAction parse_client_cmd(const char *cmd, char *arg)
 {
   char *token;
   char *saveptr;
   char *buffer = calloc(strlen(cmd) + 2, sizeof(char));
+
+  CommandAction ret = REW_CMD_ERR;
   
   if(!buffer){
     fprintf(stderr, "Failed to allocate memory!\n");
@@ -36,30 +38,31 @@ CommandAction parse_client_cmd(const char *cmd)
   
   strcpy(buffer, cmd);
   printf("CMD: %s\n", cmd);
+  token = strtok_r(buffer, ";", &saveptr);
   do{
-    token = strtok_r(buffer, " ", &saveptr);
-    //printf("Token: %s\nBuffer: %s\n", token, buffer);
+    printf("Token: %s\nBuffer: %s\n", token, buffer);
 
     if(token == NULL)
       break;
 
     if(strcmp("QUIT", token) == 0){
-      free(buffer);
-      return REW_CMD_QUIT;
+      ret = REW_CMD_QUIT;
     }
     else if(strcmp("LS", token) == 0){
-      free(buffer);
-      return REW_CMD_LS;
+      ret = REW_CMD_LS;
+    }
+    else if(strcmp("CD", token) == 0){
+      ret = REW_CMD_CD;
     }
     else{
-      break;
+      strcpy(arg, token);
     }
 
-    
+    token = strtok_r(NULL, ";", &saveptr);
   }while(token);
   
   free(buffer);
-  return REW_CMD_ERR;
+  return ret;
 }
 
 
@@ -73,6 +76,12 @@ void *serve_client(void *client_con_info) //struct ClientConnectionInfo -- must 
   //Server Client Loop
   int cmd_buffer_len = 512;
   char cmd_buffer[cmd_buffer_len];
+
+  char *arg = calloc(512, sizeof(char));
+  if(!arg){
+    fprintf(stderr, "Can't malloc a string????\n");
+    abort();
+  }
   
   do{
     memset(cmd_buffer, 0, cmd_buffer_len);
@@ -89,13 +98,18 @@ void *serve_client(void *client_con_info) //struct ClientConnectionInfo -- must 
       break;
     }
 
-    switch(parse_client_cmd((char *)&cmd_buffer)){
+    memset(arg, 0, 512);
+    
+    switch(parse_client_cmd((char *)&cmd_buffer, arg)){
     case REW_CMD_QUIT:
       close_req = 1;
       printf("Quit command\n");
       break;
     case REW_CMD_LS:
-      process_ls_cmd(0, NULL);
+      server_reply(process_ls_cmd(cci->dir));
+      break;
+    case REW_CMD_CD:
+      server_reply(process_cd_cmd(&cci->dir, arg));
       break;
     default:
       printf("Unknown command!\nCMD: %s\n", cmd_buffer);
@@ -103,8 +117,11 @@ void *serve_client(void *client_con_info) //struct ClientConnectionInfo -- must 
     }
 
   }while(!close_req);
+  free(arg);
 
+  printf("Closing client!\n");
   close(cci->sock);
+  closedir(cci->dir);
   free(cci);
   return 0;
 }
@@ -115,7 +132,16 @@ pthread_t spawn_thread(int sockfd, struct sockaddr_in addr_in, in_addr_t addr_in
   ClientConnectionInfo *cci = calloc(1, sizeof(ClientConnectionInfo));
   cci->sock = sockfd;
   cci->addr_in = addr_in;
-  cci->addr_in_len = addr_in_len; 
+  cci->addr_in_len = addr_in_len;
+  cci->dir = get_cwd();
+
+  if(!cci->dir){
+    fprintf(stderr, "Couldn't open cwd!\n%s\n", strerror(errno));
+    free(cci);
+    close(sockfd);
+    return -1;
+  }
+
   
   pthread_t thread_id = 0;
   pthread_attr_t thread_attr = {0};
@@ -161,6 +187,9 @@ int main(int argc, char **argv)
   
   do{
     open_sock = accept(socket, (struct sockaddr*)&connected_client, &connected_client_len);
+
+    if(flag_stop) break;
+    
     if(open_sock == -1){
       fprintf(stderr, "Couldn't accept connection!\n%s\n", strerror(errno));
       break;
