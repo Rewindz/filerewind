@@ -89,12 +89,41 @@ int rew_net_connect_tcp(const char *rem_addr, const char *port) // -> sockfd
 
 }
 
-
-int server_reply(int sockfd, char *reply)
+int server_ok(int sockfd)
 {
+   const char *ok_msg = "OK\n\0";
+   int ok_msg_len = strlen(ok_msg) + 1;
+   if(write(sockfd, ok_msg, ok_msg_len) != ok_msg_len){
+     fprintf(stderr, "Failed to respond to client!\n%s\n", strerror(errno));
+     return errno;
+   }
+   return 0;
+}
+
+int server_reply(int sockfd, StringArray reply)
+{
+  int msg_len = 0;
+  for(int i = 0; i < reply.count; ++i)
+    msg_len += 1 + strlen(reply.arr[i]);    
+  msg_len++;
   
+  char *msg = calloc(msg_len, sizeof(char));
+  for(int i = 0; i < reply.count; ++i){
+    strcat(msg, reply.arr[i]);
+    strcat(msg, "\n");
+  }
+ 
+  if(write(sockfd, msg, msg_len) == -1){
+    fprintf(stderr, "Error sending reply to client!\n%s\n", strerror(errno));
+    free(msg);
+    return errno;
+  }
 
+  if(server_ok(sockfd)){
+    free(msg);
+    return errno;
+  }
 
-
-
+  free(msg);
+  return 0;
 }

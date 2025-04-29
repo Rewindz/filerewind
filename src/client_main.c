@@ -45,6 +45,7 @@ int main(int argc, char **argv)
   }
 
   char buffer[256];
+  memset(buffer, 0, sizeof(buffer));
   ssize_t recieved = recv(server_sock, buffer, sizeof(buffer), 0);
   if(recieved == -1){
     fprintf(stderr, "Error recieving message from server!\n%s\n", strerror(errno));
@@ -64,21 +65,25 @@ int main(int argc, char **argv)
     close(server_sock);
     return errno;
   }
+
+
+  memset(buffer, 0, sizeof(buffer));
   while(strcmp("QUIT", input) != 0){
     scanf("%s", input);
     printf("Scan length: %zi\n", strlen(input));
     if(send_command(server_sock, input, "Failed to send command!\n%s\n") < 0) break;
+    //Wait for reply
+    // -- Server needs to send the length with the OK msg, so we can allocate a buffer sizable enough for the reply.
+
+    int reply_len = 0;
+    ssize_t recieved = recv(server_sock, buffer, sizeof(buffer), 0);
+    if(recieved == -1){
+      
+    }
+
+    
   }
   free(input);
-
-  
- 
-
-  /*const char *quit_cmd = "QUIT\n\0";
-  int quit_cmd_len = strlen(quit_cmd) + 1;
-  if(write(server_sock, quit_cmd, quit_cmd_len) != quit_cmd_len){
-    fprintf(stderr, "Failed to properly write to server! Wrote %i bytes.\n", quit_cmd_len);
-    }*/
 
   close(server_sock);
 

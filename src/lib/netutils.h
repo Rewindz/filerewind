@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <errno.h>
+
+#include "types.h"
 
 
 typedef struct{
@@ -29,6 +32,7 @@ typedef enum{
 
 int rew_net_bind_tcp(const char *port);
 int rew_net_connect_tcp(const char *rem_addr, const char *port);
-
+int server_reply(int sockfd, StringArray reply);
+int server_ok(int sockfd);
 
 #endif //REW_NET_UTILS_

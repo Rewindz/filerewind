@@ -13,6 +13,7 @@
 
 #include "lib/netutils.h"
 #include "lib/svrcmds.h"
+#include "lib/types.h"
 
 volatile sig_atomic_t flag_stop = 0;
 
@@ -106,10 +107,10 @@ void *serve_client(void *client_con_info) //struct ClientConnectionInfo -- must 
       printf("Quit command\n");
       break;
     case REW_CMD_LS:
-      server_reply(process_ls_cmd(cci->dir));
+      server_reply(cci->sock, process_ls_cmd(cci->dir));
       break;
     case REW_CMD_CD:
-      server_reply(process_cd_cmd(&cci->dir, arg));
+      process_cd_cmd(&cci->dir, arg);
       break;
     default:
       printf("Unknown command!\nCMD: %s\n", cmd_buffer);
@@ -207,13 +208,10 @@ int main(int argc, char **argv)
       close(open_sock);
     }else if(strcmp(buffer, "CON\nFR")){
       printf("Received Connection Command: %s\n", buffer);
-      const char *ok_msg = "OK\n\0";
-      int ok_msg_len = strlen(ok_msg) + 1;
-      if(write(open_sock, ok_msg, ok_msg_len) != ok_msg_len){
-	fprintf(stderr, "Failed to respond to client!\n%s\n", strerror(errno));
+      if(server_ok(open_sock))
 	close(open_sock);
-      }
-      spawn_thread(open_sock, connected_client, connected_client_len);
+      else
+	spawn_thread(open_sock, connected_client, connected_client_len);
     }
     
   }while(!flag_stop);

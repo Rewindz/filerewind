@@ -9,8 +9,10 @@
 #include <dirent.h>
 #include <string.h>
 
+#include "types.h"
+
 void process_cd_cmd(DIR **dir, const char *newDir);
-void process_ls_cmd(DIR *dir);
+StringArray process_ls_cmd(DIR *dir);
 DIR *get_cwd();
 
 

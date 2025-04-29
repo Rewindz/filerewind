@@ -47,19 +47,21 @@ void process_cd_cmd(DIR **dir, const char *newDir)
 }
 
 
-void process_ls_cmd(DIR *dir)
+StringArray process_ls_cmd(DIR *dir)
 {
   int dirList_cap = 512;
   struct dirent *dirList = calloc(dirList_cap, sizeof(struct dirent)); // Need to change this; would be very bad
 
   struct dirent *dirInfo = {0}; // manpage says dont free
   int count = 0;
+
+  StringArray ret = {0};
   do{
     errno = 0;
     dirInfo = readdir(dir);
     if(errno != 0 && !dirInfo){
       fprintf(stderr, "Could not get directory information!\n%s\n", strerror(errno));
-      return;
+      return ret;
     }
     if(dirInfo == NULL)
       break;
@@ -73,14 +75,18 @@ void process_ls_cmd(DIR *dir)
   } while(dirInfo != NULL);
 
   qsort(dirList, count, sizeof(struct dirent), dirent_cmp);
+
+  ret = new_string_array(count);
+  
   
   for(int i = 0; i < count; ++i){
     printf("File %i: %s\t\t Type: %i\n", i, dirList[i].d_name, dirList[i].d_type);
+    string_array_append(&ret, dirList[i].d_name);
   }
 
   free(dirList);
   printf("LS DONE\n");
-  return;
+  return ret;
 }
 
 
