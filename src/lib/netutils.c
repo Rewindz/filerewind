@@ -112,6 +112,32 @@ int server_reply(int sockfd, StringArray reply)
     strcat(msg, reply.arr[i]);
     strcat(msg, "\n");
   }
+
+  //Send Length
+  char first_msg[snprintf(NULL, 0, "%d", msg_len) + 1];
+  snprintf(first_msg, sizeof(first_msg), "%d", msg_len); 
+  if(write(sockfd, first_msg, strlen(first_msg) + 1) == -1){
+    fprintf(stderr, "Error sending reply to client!\n%s\n", strerror(errno));
+    free(msg);
+    return errno;
+  }
+
+  char *buffer = calloc(512, sizeof(char));
+  ssize_t recieved = recv(sockfd, buffer, 512, 0);
+  if(recieved == -1){
+    fprintf(stderr, "Error recieving message!\n%s\n", strerror(errno));
+    free(buffer);
+    free(msg);
+    return errno;
+  }
+
+  if(strcmp(buffer, first_msg) != 0){
+    fprintf(stderr, "Did not recieve correct reply!\nExpected: %s\nGot: %s\n", first_msg, buffer);
+    free(buffer);
+    free(msg);
+    return -1;
+  }
+  free(buffer);
  
   if(write(sockfd, msg, msg_len) == -1){
     fprintf(stderr, "Error sending reply to client!\n%s\n", strerror(errno));
@@ -119,10 +145,10 @@ int server_reply(int sockfd, StringArray reply)
     return errno;
   }
 
-  if(server_ok(sockfd)){
+  /*if(server_ok(sockfd)){
     free(msg);
     return errno;
-  }
+    }*/
 
   free(msg);
   return 0;

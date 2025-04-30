@@ -44,7 +44,7 @@ int main(int argc, char **argv)
     fprintf(stderr, "Failed to send connection message to server.\n");
   }
 
-  char buffer[256];
+  char buffer[512];
   memset(buffer, 0, sizeof(buffer));
   ssize_t recieved = recv(server_sock, buffer, sizeof(buffer), 0);
   if(recieved == -1){
@@ -78,10 +78,14 @@ int main(int argc, char **argv)
     int reply_len = 0;
     ssize_t recieved = recv(server_sock, buffer, sizeof(buffer), 0);
     if(recieved == -1){
-      
+      //error
     }
-
-    
+    sscanf(buffer, "%d", &reply_len);
+    write(server_sock, buffer, strlen(buffer) + 1); //Maybe should wait for a server ok here
+    char *msg = calloc(reply_len + 1, sizeof(char));
+    recieved = recv(server_sock, msg, reply_len + 1, 0);
+    printf("%s", msg);
+    free(msg);
   }
   free(input);
 
